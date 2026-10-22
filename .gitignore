@@ -1,0 +1,21 @@
+# ---- Lab-02 required ----
+target/
+data/
+
+# ---- Build output & logs ----
+*.class
+*.log
+*.jar
+
+# ---- IDE & OS junk ----
+.idea/
+*.iml
+.vscode/
+.settings/
+.project
+.classpath
+.DS_Store
+Thumbs.db
+
+# ---- Maven wrapper (optional, but ignore if generated) ----
+.mvn/wrapper/maven-wrapper.jar
