@@ -24,6 +24,12 @@ public final class CsvTransactionParser implements TransactionParser {
             throw new InvalidRowException(
                     "expected 10 fields, found " + f.length, line);
         }
+        for (int i = 0; i < f.length; i++) {
+            if (f[i].isBlank()) {
+                throw new InvalidRowException(
+                        "missing value for field " + (i + 1), line);
+            }
+        }
         try {
             String branch = oneOf(f[0], BRANCHES, "branch", line);
             LocalDate date = LocalDate.parse(f[1]);
