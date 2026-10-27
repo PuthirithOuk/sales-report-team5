@@ -1,7 +1,9 @@
 package edu.itc.salesreport.ui.fx;
 
+
 import edu.itc.salesreport.model.SaleTransaction;
 import edu.itc.salesreport.ui.ErrorDisplay;
+import edu.itc.salesreport.ui.ReportController;
 import edu.itc.salesreport.ui.SalesEvent;
 import edu.itc.salesreport.ui.SalesModel;
 import edu.itc.salesreport.ui.SalesModelListener;
@@ -35,6 +37,17 @@ public final class ReportView implements SalesModelListener, ErrorDisplay {
             new BarChart<>(new CategoryAxis(), new NumberAxis());
     private final Label status = new Label("No month loaded");
     private final Label error = new Label();
+
+    
+        public void bind(ReportController controller) {
+
+        monthField.setOnAction(e ->
+                controller.monthEntered(monthField.getText()));
+
+        branchBox.setOnAction(e ->
+                controller.branchChosen(branchBox.getValue()));
+        }
+
 
     public ReportView(SalesModel model) {
         this.model = model;
