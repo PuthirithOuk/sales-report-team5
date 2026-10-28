@@ -46,7 +46,8 @@ public final class FxReportScreen implements ReportScreen {
                 column("Product", RowItem::product),
                 column("Category", RowItem::category),
                 column("Qty", RowItem::quantity),
-                column("Revenue", RowItem::revenue)));
+               column("Revenue", RowItem::revenue),
+               column("Discount", RowItem::discount)));
         table.setColumnResizePolicy(TableView.CONSTRAINED_RESIZE_POLICY_FLEX_LAST_COLUMN);
 
         chart.setTitle("Revenue by category (USD)");

@@ -63,10 +63,10 @@ public final class ReportPresenter implements SalesModelListener {
                         money(s.revenue()), money(s.averageBasket())));
         screen.showError("");
     }
-
-    private static RowItem toRow(SaleTransaction t) {
+    private static RowItem toRow(SaleTransaction t) {   
         return new RowItem(t.date().toString(), t.receiptNo(), t.productName(),
-                t.category(), Integer.toString(t.quantity()), money(t.revenue()));
+            t.category(), Integer.toString(t.quantity()),
+            money(t.revenue()), money(t.discount()));
     }
 
     static String money(BigDecimal amount) {

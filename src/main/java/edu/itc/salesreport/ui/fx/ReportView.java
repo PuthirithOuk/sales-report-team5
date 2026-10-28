@@ -62,7 +62,9 @@ public final class ReportView implements SalesModelListener, ErrorDisplay {
                 column("Qty", transaction ->
                         Integer.toString(transaction.quantity())),
                 column("Revenue", transaction ->
-                        transaction.revenue().toPlainString())));
+                        transaction.revenue().toPlainString()),
+                column("Discount", transaction ->
+           transaction.discount().toPlainString())));
         table.setColumnResizePolicy(TableView.CONSTRAINED_RESIZE_POLICY_FLEX_LAST_COLUMN);
 
         chart.setTitle("Revenue by category (USD)");

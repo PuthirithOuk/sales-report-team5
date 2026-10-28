@@ -54,7 +54,7 @@ class ReportPresenterTest {
         assertEquals("PNH · 1 receipts · revenue USD 31.00 · basket USD 31.00",
                 screen.status);
         assertEquals(new RowItem("2026-09-01", "PNH-000001", "Power Bank 10000mAh",
-                "Electronics", "1", "18.00"), screen.rows.get(1));
+        "Electronics", "1", "18.00", "0.90"), screen.rows.get(1));
     }
 
     @Test
