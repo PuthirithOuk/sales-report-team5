@@ -10,7 +10,7 @@ import java.util.List;
 import org.junit.jupiter.api.Test;
 
 class UiIndependenceTest {
-    private static final List<String> PACKAGES = List.of("model", "ingest", "engine", "ui");
+    private static final List<String> PACKAGES = List.of("model", "ingest", "engine", "ui", "ui/mvp");
     private static final List<String> BANNED =
             List.of("import javafx.", "import java.awt.", "import javax.swing.");
 
