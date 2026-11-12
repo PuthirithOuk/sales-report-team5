@@ -73,7 +73,7 @@ class ReportWebControllerTest {
     void unknownBranchShowsMessage() {
         assertThat(mvc.get().uri("/report?month=2026-09&branch=XYZ"))
                 .hasStatusOk()
-                .bodyText().contains("Unknown branch 'XYZ'");
+                .bodyText().contains("Unknown branch &#39;XYZ&#39;");
     }
 
     @Test

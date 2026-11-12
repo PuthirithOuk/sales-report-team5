@@ -1,9 +1,24 @@
 package edu.itc.salesreport.engine;
 
-import edu.itc.salesreport.model.*;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
-import java.util.*;
+import java.nio.file.Path;
+import java.time.YearMonth;
+import java.util.EnumMap;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+import java.util.TreeMap;
+
+import edu.itc.salesreport.ingest.CsvMonthReader;
+import edu.itc.salesreport.ingest.CsvTransactionParser;
+import edu.itc.salesreport.ingest.MonthData;
+import edu.itc.salesreport.model.BranchSummary;
+import edu.itc.salesreport.model.PaymentMethod;
+import edu.itc.salesreport.model.ProductTotal;
+import edu.itc.salesreport.model.SaleTransaction;
 
 public final class DefaultSalesAggregator implements SalesAggregator {
     @Override
@@ -39,5 +54,14 @@ public final class DefaultSalesAggregator implements SalesAggregator {
         return new BranchSummary(branch, revenue.setScale(2, RoundingMode.HALF_UP),
                 discounts.setScale(2, RoundingMode.HALF_UP), receipts.size(),
                 byCategory, top, byPayment);
+    }
+
+    public BranchSummary aggregate(Path dataDir, YearMonth month, String branch) throws Exception {
+        var reader = new CsvMonthReader(new CsvTransactionParser());
+        MonthData data = reader.read(dataDir, month);
+        List<SaleTransaction> branchRows = data.rows().stream()
+                .filter(t -> t.branch().equals(branch))
+                .toList();
+        return summarize(branch, branchRows);
     }
 }

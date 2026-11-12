@@ -85,29 +85,53 @@ public final class ReportViewModel {
     public ReportViewModel(SummarySource source, BackgroundJobs jobs,
                            Clock clock) {
         this.source = Objects.requireNonNull(source);
-        this.jobs = Objects.requireNonNull(jobs);
-        this.clock = Objects.requireNonNull(clock);
-        
+        this.jobs   = Objects.requireNonNull(jobs);
+        this.clock  = Objects.requireNonNull(clock);
+
         YearMonth now = YearMonth.now(clock);
         for (int i = 0; i < 12; i++) {
             monthChoices.add(now.minusMonths(i));
         }
-        
-        // 1. Initialize the month so the ComboBox isn't blank
-        month.set(now);
-        
+
         for (String b : BRANCHES) {
             branchSelected.put(b, new SimpleBooleanProperty(this, b, true));
         }
-        
-        // Placeholders for Task 3
-        monthError = Bindings.createStringBinding(() -> "", month);
-        branchError = Bindings.createStringBinding(() -> "");
-        validationMessage = Bindings.createStringBinding(() -> "");
-        
-        canGenerate = month.isNotNull().and(loading.not());
-        
-        // Task 2: Sum of summaries' revenue
+
+        // Collect branch props so bindings observe them
+        BooleanProperty[] branchProps =
+                branchSelected.values().toArray(new BooleanProperty[0]);
+
+        // Validation: future-month guard
+        monthError = Bindings.createStringBinding(() -> {
+            YearMonth m = month.get();
+            if (m == null) return "";
+            if (m.isAfter(YearMonth.now(clock))) {
+                return "Month " + m + " is in the future.";
+            }
+            return "";
+        }, month);
+
+        // Validation: at-least-one-branch guard
+        branchError = Bindings.createStringBinding(() -> {
+            boolean any = branchSelected.values().stream()
+                    .anyMatch(BooleanProperty::get);
+            return any ? "" : "Select at least one branch.";
+        }, branchProps);
+
+        // Combined validation message: month error takes priority
+        validationMessage = Bindings.createStringBinding(() -> {
+            String me = monthError.get();
+            return me.isEmpty() ? branchError.get() : me;
+        }, monthError, branchError);
+
+        // Generate is enabled when: month set, no validation error, not loading
+        canGenerate = Bindings.createBooleanBinding(
+                () -> month.get() != null
+                   && validationMessage.get().isEmpty()
+                   && !loading.get(),
+                month, validationMessage, loading);
+
+        // Revenue total across all loaded summaries
         totalRevenue = Bindings.createObjectBinding(() -> {
             BigDecimal sum = BigDecimal.ZERO;
             for (BranchSummary s : summaries) {
@@ -116,28 +140,29 @@ public final class ReportViewModel {
             return sum;
         }, summaries);
 
-        // 2. Properly format "USD 1,234.50" as required by the lab
+        // Formatted revenue string
         totalRevenueText = Bindings.createStringBinding(() -> {
             BigDecimal rev = totalRevenue.get();
             if (rev == null) rev = BigDecimal.ZERO;
             return String.format(Locale.US, "USD %,.2f", rev);
         }, totalRevenue);
 
-        // Task 2: Bind visibleProducts' predicate to productFilter
-        visibleProducts.predicateProperty().bind(Bindings.createObjectBinding(() -> {
-            String filter = productFilter.get();
-            if (filter == null || filter.isBlank()) {
-                return p -> true;
-            }
-            String f = filter.toLowerCase(Locale.ROOT);
-            return p -> p.productName().toLowerCase(Locale.ROOT).contains(f)
-                     || p.sku().toLowerCase(Locale.ROOT).contains(f);
-        }, productFilter));
+        // Product filter predicate (case-insensitive, matches name or SKU)
+        visibleProducts.predicateProperty().bind(
+                Bindings.createObjectBinding(() -> {
+                    String filter = productFilter.get();
+                    if (filter == null || filter.isBlank()) return p -> true;
+                    String f = filter.toLowerCase(Locale.ROOT);
+                    return p -> p.productName().toLowerCase(Locale.ROOT).contains(f)
+                             || p.sku().toLowerCase(Locale.ROOT).contains(f);
+                }, productFilter));
 
         generateCommand = new DelegateCommand(this::generate, canGenerate);
-        cancelCommand = new DelegateCommand(this::cancel,
+        cancelCommand   = new DelegateCommand(this::cancel,
                 loading.getReadOnlyProperty());
     }
+
+    // ---- commands -------------------------------------------------------
 
     public List<String> selectedBranches() {
         return branchSelected.entrySet().stream()
@@ -151,95 +176,88 @@ public final class ReportViewModel {
         List<String> selected = selectedBranches();
         if (m == null || selected.isEmpty()) return;
 
+        // Snapshot inputs before going async
+        List<String> snapshot = List.copyOf(selected);
+        YearMonth monthSnapshot = m;
+
         loading.set(true);
+        progress.set(0);
         status.set("Loading...");
         loadError.set("");
-        
-        jobs.submit(sink -> {
+
+        running = jobs.submit(sink -> {
             List<BranchSummary> results = new ArrayList<>();
             int count = 0;
-            for (String b : selected) {
-                results.add(source.load(m, b));
+            for (String b : snapshot) {
+                if (sink.isCancelled()) break;
+                results.add(source.load(monthSnapshot, b));
                 count++;
-                sink.update(count, selected.size());
+                sink.update(count, snapshot.size());
             }
             return results;
         }, new BackgroundJobs.JobListener<List<BranchSummary>>() {
-            @Override
-            public void progress(double fraction) {
+
+            @Override public void progress(double fraction) {
                 progress.set(fraction);
             }
 
-            @Override
-            public void succeeded(List<BranchSummary> results) {
+            @Override public void succeeded(List<BranchSummary> results) {
                 summaries.setAll(results);
                 products.clear();
                 for (BranchSummary r : results) {
                     products.addAll(r.topProducts());
                 }
-                status.set("Loaded " + results.size() + " branch(es) for " + m + ".");
+                status.set("Loaded " + results.size()
+                        + " branch(es) for " + monthSnapshot + ".");
                 loading.set(false);
+                running = null;
             }
 
-            @Override
-            public void failed(Throwable error) {
-                error.printStackTrace();
+            @Override public void failed(Throwable error) {
                 loadError.set(error.getMessage());
                 status.set("Load failed, previous data kept.");
                 loading.set(false);
+                running = null;
             }
 
-            @Override
-            public void cancelled() {
+            @Override public void cancelled() {
                 status.set("Cancelled, previous data kept.");
                 loading.set(false);
+                running = null;
             }
         });
     }
 
     private void cancel() {
-        // TODO Task 4: cancel the running job, if any
+        if (running != null) {
+            running.cancel();
+        }
     }
 
-    // ---- accessors: read-only types for everything the view must not set
-    public ObjectProperty<YearMonth> monthProperty() { return month; }
-    public BooleanProperty branchSelectedProperty(String branch) {
-        return Objects.requireNonNull(branchSelected.get(branch), branch);
+    // ---- property accessors ---------------------------------------------
+
+    public ObjectProperty<YearMonth>        monthProperty()          { return month; }
+    public BooleanProperty                  branchSelectedProperty(String b) {
+        return Objects.requireNonNull(branchSelected.get(b), b);
     }
-    public StringProperty productFilterProperty() { return productFilter; }
-    public ObservableList<YearMonth> monthChoices() {
+    public StringProperty                   productFilterProperty()   { return productFilter; }
+    public ObservableList<YearMonth>        monthChoices()           {
         return FXCollections.unmodifiableObservableList(monthChoices);
     }
-    public ObservableList<BranchSummary> summaries() {
+    public ObservableList<BranchSummary>    summaries()              {
         return FXCollections.unmodifiableObservableList(summaries);
     }
-    public ObservableList<ProductTotal> visibleProducts() {
-        return visibleProducts;
-    }
-    public ReadOnlyBooleanProperty loadingProperty() {
-        return loading.getReadOnlyProperty();
-    }
-    public ReadOnlyDoubleProperty progressProperty() {
-        return progress.getReadOnlyProperty();
-    }
-    public ReadOnlyStringProperty statusProperty() {
-        return status.getReadOnlyProperty();
-    }
-    public ReadOnlyStringProperty loadErrorProperty() {
-        return loadError.getReadOnlyProperty();
-    }
-    public StringExpression monthErrorProperty() { return monthError; }
-    public StringExpression branchErrorProperty() { return branchError; }
-    public StringExpression validationMessageProperty() {
-        return validationMessage;
-    }
-    public ObservableBooleanValue canGenerateProperty() { return canGenerate; }
-    public ObservableObjectValue<BigDecimal> totalRevenueProperty() {
-        return totalRevenue;
-    }
-    public StringExpression totalRevenueTextProperty() {
-        return totalRevenueText;
-    }
-    public Command generateCommand() { return generateCommand; }
-    public Command cancelCommand() { return cancelCommand; }
+    public ObservableList<ProductTotal>     visibleProducts()        { return visibleProducts; }
+    public ReadOnlyBooleanProperty          loadingProperty()        { return loading.getReadOnlyProperty(); }
+    public ReadOnlyDoubleProperty           progressProperty()       { return progress.getReadOnlyProperty(); }
+    public ReadOnlyStringProperty           statusProperty()         { return status.getReadOnlyProperty(); }
+    public ReadOnlyStringProperty           loadErrorProperty()      { return loadError.getReadOnlyProperty(); }
+    public StringExpression                 monthErrorProperty()     { return monthError; }
+    public StringExpression                 branchErrorProperty()    { return branchError; }
+    public StringExpression                 validationMessageProperty() { return validationMessage; }
+    public ObservableBooleanValue           canGenerateProperty()    { return canGenerate; }
+    public ObservableObjectValue<BigDecimal> totalRevenueProperty()  { return totalRevenue; }
+    public StringExpression                 totalRevenueTextProperty() { return totalRevenueText; }
+    public Command                          generateCommand()        { return generateCommand; }
+    public Command                          cancelCommand()          { return cancelCommand; }
 }

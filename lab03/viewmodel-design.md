@@ -136,3 +136,14 @@ classDiagram
     BackgroundJobs <|.. CallerThreadJobs
     BackgroundJobs <|.. FxBackgroundJobs
     BackgroundJobs <|.. ManualJobs
+    stateDiagram-v2
+    [*] --> Incomplete
+    Incomplete --> Invalid : input changed
+    Incomplete --> Ready : month chosen and branch ticked
+    Invalid --> Ready : input fixed
+    Ready --> Loading : generate
+    Loading --> Loaded : succeeded
+    Loading --> Failed : failed
+    Loading --> Ready : cancelled
+    Loaded --> Loading : generate again
+    Failed --> Loading : generate again

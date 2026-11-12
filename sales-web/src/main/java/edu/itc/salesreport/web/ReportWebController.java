@@ -54,6 +54,7 @@ public class ReportWebController {
                     page.addAttribute("error", message);
             case Inputs(Valid<YearMonth> _, Invalid<String>(var message)) ->
                     page.addAttribute("error", message);
+                default -> page.addAttribute("error", "Invalid report input");
         }
         return "report";
     }
