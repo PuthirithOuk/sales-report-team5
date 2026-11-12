@@ -148,12 +148,27 @@ public final class ReportViewModel {
             branchSelected.put(b, new SimpleBooleanProperty(this, b, true));
         }
         
-        // Placeholders for Task 3
-        monthError = Bindings.createStringBinding(() -> "", month);
-        branchError = Bindings.createStringBinding(() -> "");
-        validationMessage = Bindings.createStringBinding(() -> "");
+                // Task 3: Real validation rules
+        var flags = branchSelected.values().toArray(javafx.beans.Observable[]::new);
         
-        canGenerate = month.isNotNull().and(loading.not());
+        monthError = Bindings.createStringBinding(() -> checkMonth(month.get()), month);
+        
+        branchError = Bindings.createStringBinding(() -> {
+            boolean anySelected = branchSelected.values().stream().anyMatch(javafx.beans.property.BooleanProperty::get);
+            return anySelected ? "" : "Select at least one branch.";
+        }, flags);
+        
+        validationMessage = Bindings.createStringBinding(() -> {
+            String mErr = monthError.get();
+            String bErr = branchError.get();
+            if (!mErr.isEmpty() && !bErr.isEmpty()) return mErr + " " + bErr;
+            if (!mErr.isEmpty()) return mErr;
+            if (!bErr.isEmpty()) return bErr;
+            return "";
+        }, monthError, branchError);
+        
+        BooleanBinding valid = monthError.isEmpty().and(branchError.isEmpty());
+        canGenerate = valid.and(loading.not());
         
         // Task 2: Sum of summaries' revenue
 >>>>>>> b48143f650db5c76f0e6a821577644ec30d8044e
@@ -358,6 +373,15 @@ public final class ReportViewModel {
     }
 
     // ---- accessors: read-only types for everything the view must not set
+        private String checkMonth(YearMonth m) {
+        if (m == null) {
+            return "Choose a month.";
+        }
+        if (m.isAfter(YearMonth.now(clock))) {
+            return "Month " + m + " is in the future.";
+        }
+        return "";
+    }
     public ObjectProperty<YearMonth> monthProperty() { return month; }
     public BooleanProperty branchSelectedProperty(String branch) {
         return Objects.requireNonNull(branchSelected.get(branch), branch);
