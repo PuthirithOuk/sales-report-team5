@@ -33,8 +33,7 @@ public class ReportViewerApp extends Application {
             return aggregator.summarize(branch, branchRows);
         };
 
-        var vm = new ReportViewModel(source, new CallerThreadJobs(),
-                Clock.systemDefaultZone());
+        var vm = new ReportViewModel(source, new FxBackgroundJobs(), Clock.systemDefaultZone());
 
         stage.setScene(new Scene(new ReportView(vm).root(), 960, 600));
         stage.setTitle("Angkor Mart · Monthly report (MVVM)");
