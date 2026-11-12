@@ -214,7 +214,9 @@ public final class ReportViewModel {
             }
 
             @Override public void failed(Throwable error) {
-                loadError.set(error.getMessage());
+                String message = error.getMessage();
+                loadError.set(message == null || message.isBlank()
+                        ? error.getClass().getSimpleName() : message);
                 status.set("Load failed, previous data kept.");
                 loading.set(false);
                 running = null;

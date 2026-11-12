@@ -1,6 +1,5 @@
-package edu.itc.salesreport.ui.fx;
+package edu.itc.salesreport.ui;
 
-import edu.itc.salesreport.ui.ReportViewModel;
 import javafx.beans.binding.Bindings;
 import javafx.geometry.Insets;
 import javafx.scene.Parent;

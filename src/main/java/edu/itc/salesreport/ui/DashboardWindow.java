@@ -1,6 +1,5 @@
-package edu.itc.salesreport.ui.fx;
+package edu.itc.salesreport.ui;
 
-import edu.itc.salesreport.ui.ReportViewModel;
 import javafx.scene.Scene;
 import javafx.stage.Stage;
 
@@ -9,9 +8,20 @@ import javafx.stage.Stage;
  * the same ReportViewModel instance as the main viewer.
  */
 public final class DashboardWindow {
+    private static Stage sharedDashboard;
 
     public static Stage open(ReportViewModel vm) {
+        if (sharedDashboard != null && sharedDashboard.isShowing()) {
+            return sharedDashboard;
+        }
+
         Stage dash = new Stage();
+        sharedDashboard = dash;
+        dash.setOnHidden(event -> {
+            if (sharedDashboard == dash) {
+                sharedDashboard = null;
+            }
+        });
         dash.setScene(new Scene(new DashboardView(vm).root(), 320, 280));
         dash.setTitle("Angkor Mart · Dashboard");
         dash.setAlwaysOnTop(true);

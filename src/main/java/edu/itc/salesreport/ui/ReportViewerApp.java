@@ -9,7 +9,6 @@ import edu.itc.salesreport.ingest.CsvMonthReader;
 import edu.itc.salesreport.ingest.CsvTransactionParser;
 import edu.itc.salesreport.ingest.MonthData;
 import edu.itc.salesreport.model.SaleTransaction;
-import edu.itc.salesreport.ui.fx.DashboardWindow;
 import javafx.application.Application;
 import javafx.scene.Scene;
 import javafx.stage.Stage;
@@ -37,10 +36,12 @@ public class ReportViewerApp extends Application {
 
         stage.setScene(new Scene(new ReportView(vm).root(), 960, 600));
         stage.setTitle("Angkor Mart · Monthly report (MVVM)");
-        stage.show();
 
-        // Challenge: open the dashboard in a second window sharing the same VM
+        // Challenge: open the dashboard in a second window sharing the same VM.
+        // Create it before showing the main window so the companion dashboard is
+        // ready immediately and does not duplicate itself on repeated launches.
         DashboardWindow.open(vm);
+        stage.show();
     }
 
     public static void main(String[] args) {

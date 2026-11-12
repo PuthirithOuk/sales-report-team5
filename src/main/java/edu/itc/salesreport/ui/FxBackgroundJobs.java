@@ -3,6 +3,7 @@ package edu.itc.salesreport.ui;
 import java.util.Objects;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.function.BiConsumer;
 
 import javafx.application.Platform;
 import javafx.concurrent.Task;
@@ -24,17 +25,8 @@ public final class FxBackgroundJobs implements BackgroundJobs {
         Task<T> task = new Task<>() {
             @Override
             protected T call() throws Exception {
-                ProgressSink sink = new ProgressSink() {
-                    @Override
-                    public void update(long done, long total) {
-                        updateProgress(done, total);
-                    }
-
-                    @Override
-                    public boolean isCancelled() {
-                        return isCancelled();
-                    }
-                };
+                ProgressSink sink = progressSink(this,
+                        (done, total) -> updateProgress(done, total));
                 return work.run(sink);
             }
         };
@@ -54,6 +46,21 @@ public final class FxBackgroundJobs implements BackgroundJobs {
             @Override
             public void cancel() {
                 task.cancel(true);
+            }
+        };
+    }
+
+    static ProgressSink progressSink(Task<?> task,
+                                     BiConsumer<Long, Long> progressUpdater) {
+        return new ProgressSink() {
+            @Override
+            public void update(long done, long total) {
+                progressUpdater.accept(done, total);
+            }
+
+            @Override
+            public boolean isCancelled() {
+                return task.isCancelled();
             }
         };
     }

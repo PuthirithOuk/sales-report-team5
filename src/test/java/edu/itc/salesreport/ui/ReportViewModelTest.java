@@ -160,6 +160,20 @@ class ReportViewModelTest {
         assertTrue(vm.generateCommand().isExecutable());
     }
 
+    @Test
+    void failureWithoutMessageShowsExceptionType() {
+        SummarySource source = (month, branch) -> {
+            throw new IOException();
+        };
+        vm = new ReportViewModel(source, jobs, SEP_27);
+        vm.monthProperty().set(AUG);
+        vm.generateCommand().execute();
+        jobs.runNext();
+
+        assertEquals("IOException", vm.loadErrorProperty().get());
+        assertFalse(vm.loadingProperty().get());
+    }
+
     // ── Cancellation (1 test) ─────────────────────────────────────────────
 
     @Test
