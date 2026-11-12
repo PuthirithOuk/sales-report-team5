@@ -35,6 +35,9 @@ public final class ReportView {
         month.setEditable(true);
         month.setConverter(new YearMonthConverter());
         month.valueProperty().bindBidirectional(vm.monthProperty());
+        month.styleProperty().bind(Bindings
+                .when(vm.monthErrorProperty().isEmpty())
+                .then("").otherwise("-fx-border-color: crimson;"));
 
         HBox filters = new HBox(8, new Label("Month"), month);
         for (String b : ReportViewModel.BRANCHES) {
@@ -47,27 +50,27 @@ public final class ReportView {
         generate.setOnAction(e -> vm.generateCommand().execute());
         generate.disableProperty().bind(
                 Bindings.not(vm.generateCommand().executableProperty()));
-                
+
         Button cancel = new Button("Cancel");
         cancel.setOnAction(e -> vm.cancelCommand().execute());
         cancel.disableProperty().bind(
                 Bindings.not(vm.cancelCommand().executableProperty()));
-                
+
         filters.getChildren().addAll(generate, cancel);
 
         ProgressBar bar = new ProgressBar();
         bar.progressProperty().bind(vm.progressProperty());
         bar.visibleProperty().bind(vm.loadingProperty());
-        
+
         Label validation = new Label();
         validation.textProperty().bind(vm.validationMessageProperty());
-        
+
         Label status = new Label();
         status.textProperty().bind(vm.statusProperty());
-        
+
         Label error = new Label();
         error.textProperty().bind(vm.loadErrorProperty());
-        
+
         Label total = new Label();
         total.textProperty().bind(vm.totalRevenueTextProperty());
 
@@ -75,17 +78,17 @@ public final class ReportView {
         table.getColumns().add(column("Branch", BranchSummary::branch));
         table.getColumns().add(column("Revenue",
                 s -> s.revenue().toPlainString()));
-        table.getColumns().add(column("Discounts", 
+        table.getColumns().add(column("Discounts",
                 s -> s.discounts().toPlainString()));
-        table.getColumns().add(column("Receipts", 
+        table.getColumns().add(column("Receipts",
                 s -> String.valueOf(s.receipts())));
-        table.getColumns().add(column("Avg basket", 
+        table.getColumns().add(column("Avg basket",
                 s -> s.averageBasket().toPlainString()));
 
         TextField search = new TextField();
         search.setPromptText("Filter products");
         search.textProperty().bindBidirectional(vm.productFilterProperty());
-        
+
         ListView<ProductTotal> productList = new ListView<>(vm.visibleProducts());
         productList.setCellFactory(lv -> new ListCell<>() {
             @Override
